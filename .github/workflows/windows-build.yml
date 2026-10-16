@@ -1,0 +1,32 @@
+name: PROSTE WIDEO Windows EXE
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Test processing engine
+        run: python -m pytest -q tests/test_core.py tests/test_new_features.py
+      - name: Build standalone PROSTE_WIDEO.exe
+        run: |
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name PROSTE_WIDEO --hidden-import=PIL._tkinter_finder --collect-all cv2 --collect-all imageio_ffmpeg proste_wideo.py
+      - name: Verify EXE exists
+        shell: pwsh
+        run: |
+          if (!(Test-Path dist/PROSTE_WIDEO.exe)) { throw 'Build failed: no EXE' }
+          Get-Item dist/PROSTE_WIDEO.exe | Format-List Name,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PROSTE-WIDEO-Windows-exe
+          path: dist/PROSTE_WIDEO.exe
+          if-no-files-found: error
